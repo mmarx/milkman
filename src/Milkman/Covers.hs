@@ -66,7 +66,7 @@ coversCross :: Cross -> Concept -> Bool
 coversCross (o, a) (ext, int) = o `elem` ext && a `elem` int
 
 coversCrosses :: [Concept] -> [Cross] -> Bool
-coversCrosses cs crs = all (\cr -> any (coversCross cr) cs) crs
+coversCrosses cs = all (\cr -> any (coversCross cr) cs)
 
 conceptualCovers :: Monad m => Context -> m [[Concept]]
 conceptualCovers ctx = do
@@ -120,7 +120,7 @@ updateState (_, co) s = s' { sizeBound = bound }
         bound = if isCover s'
                   then length $ preCover s'
                   else sizeBound s
-        uncovered c = not $ any (coversCross c) $ preCover'
+        uncovered c = not $ any (coversCross c) preCover'
 
 isCover :: State -> Bool
 isCover s = null (remCrosses s) || coversCrosses (preCover s) (allCrosses s)
@@ -129,9 +129,9 @@ step :: State -> [State]
 step s = if isCover s || length (preCover s) > sizeBound s
            then []
            else let cr = head $ remCrosses s
-                in map (flip updateState s) $ [ (cr, co)
-                                              | co <- (candidates s) ! cr
-                                              ]
+                in map (`updateState` s) [ (cr, co)
+                                         | co <- candidates s ! cr
+                                         ]
 
 search :: State -> [[Concept]]
 search s = if null $ remCrosses s

@@ -23,6 +23,7 @@ module Milkman.Context ( Concept
                        ) where
 
 import Control.Applicative ((<$>))
+import Control.Arrow (first)
 import Control.Monad ( liftM
                      , when
                      )
@@ -84,10 +85,10 @@ mkContext objs atts rows = do
           i = fromListUnboxed (Z :. no :. na :: DIM2) $ concat rows
 
 objects :: Context -> [(Object, Text)]
-objects (Context g _ _) = map (\(o, n) -> (Object o, n)) $ assocs g
+objects (Context g _ _) = map (first Object) $ assocs g
 
 attributes :: Context -> [(Attribute, Text)]
-attributes (Context _ m _) = map (\(a, n) -> (Attribute a, n)) $ assocs m
+attributes (Context _ m _) = map (first Attribute) $ assocs m
 
 incidence :: Context -> [Bool]
 incidence (Context _ _ i) = toList i
@@ -143,10 +144,10 @@ clarify :: Monad m => Context -> m Context
 clarify c@(Context g m i) = do
   let no = length $ keys g
       na = length $ keys m
-      (g', ro) = clarify' g [ (j, unAttribute <$> (intent c $ Object j))
+      (g', ro) = clarify' g [ (j, unAttribute <$> intent c (Object j))
                             | j <- [0..(no - 1)]
                             ]
-      (m', ra) = clarify' m [ (j, unObject <$> (extent c $ Attribute j))
+      (m', ra) = clarify' m [ (j, unObject <$> extent c (Attribute j))
                             | j <- [0..(na - 1)]
                             ]
   return $! Context g' m'
