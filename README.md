@@ -5,7 +5,9 @@ formal context.  Currently supports reading contexts in Burmeister and
 conexp format, and exports to Burmeister format.
 
 ## Setup
-cabal configure && cabal build
+cabal install --only-dependencies
+cabal configure
+cabal build
 
 It might be a good idea to use hsenv as a build environment.
 
