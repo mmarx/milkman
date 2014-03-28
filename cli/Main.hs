@@ -49,15 +49,11 @@ factor s = do
 
       cs <- conceptualCovers cxt
 
-      let lns = map length cs
-          dim = minimum lns
-          mcs = filter ((dim==) . length) cs
-
       print . length $ concepts cxt
-      print . length $ mcs
+      print . length $ cs
       putStrLn ""
 
-      mapM_ (writeFactors s cxt) $ zip [1..] mcs
+      mapM_ (writeFactors s cxt) $ zip [1..] cs
 
       tis <- tightCrosses cxt
       put tis
