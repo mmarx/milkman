@@ -18,7 +18,8 @@ library
                      , Milkman.Covers
                      , Milkman.Factors
                      , Milkman.IO
-  other-modules:       Milkman.IO.Burmeister
+  other-modules:       Milkman.Context.Context
+                     , Milkman.IO.Burmeister
                      , Milkman.IO.Conexp
   other-extensions:    BangPatterns
                      , MultiParamTypeClasses

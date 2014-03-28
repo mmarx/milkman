@@ -1,10 +1,8 @@
 {-# LANGUAGE BangPatterns, MultiParamTypeClasses, OverloadedStrings, TemplateHaskell, TypeFamilies, TypeOperators #-}
 
 module Milkman.Context ( Concept
-                       , Context (..)
+                       , Context ()
                        , Cross
-                       , Attribute (..)
-                       , Object (..)
                        , attributes
                        , augment
                        , clarify
@@ -22,9 +20,6 @@ module Milkman.Context ( Concept
                        , showAugmented
                        , showIncidence
                        , tightCrosses
-
-                       , unAttribute
-                       , unObject
                        ) where
 
 import Control.Applicative ((<$>))
@@ -53,7 +48,6 @@ import Data.Array.Repa.Index ( Z (Z)
                              )
 import Data.Array.Repa.Shape (listOfShape)
 import Data.Map.Strict ( (!)
-                       , Map
                        , assocs
                        , fromList
                        , keys
@@ -64,10 +58,16 @@ import qualified Data.Vector.Generic.Mutable
 import Data.Vector.Unboxed.Base ()
 import Data.Vector.Unboxed.Deriving (derivingUnbox)
 
-type Names = Map Int Text
-type Incidence = Array U DIM2 Bool
-data Context = Context Names Names Incidence
-             deriving (Show)
+import Milkman.Context.Context ( Attribute ( Attribute
+                                           , unAttribute
+                                           )
+                               , Context (Context)
+                               , Object ( Object
+                                        , unObject
+                                        )
+                               , Incidence
+                               , Names
+                               )
 
 mkContext :: Monad m => [Text] -> [Text] -> [[Bool]] -> m Context
 mkContext objs atts rows = do
@@ -82,17 +82,6 @@ mkContext objs atts rows = do
           g = fromList $ zip [0..] objs
           m = fromList $ zip [0..] atts
           i = fromListUnboxed (Z :. no :. na :: DIM2) $ concat rows
-
-newtype Object = Object Int
-               deriving (Read, Show, Eq, Ord)
-newtype Attribute = Attribute Int
-                  deriving (Read, Show, Eq, Ord)
-
-unObject :: Object -> Int
-unObject (Object o) = o
-
-unAttribute :: Attribute -> Int
-unAttribute (Attribute a) = a
 
 objects :: Context -> [(Object, Text)]
 objects (Context g _ _) = map (\(o, n) -> (Object o, n)) $ assocs g

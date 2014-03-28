@@ -27,15 +27,16 @@ import Data.Set ( Set
                 )
 
 import Milkman.Context ( Concept
-                       , Context (..)
                        , Cross
-                       , Object (..)
-                       , Attribute (..)
                        , concepts
                        , incident
                        , objectAttributeConcepts
                        , tightCrosses
                        )
+import Milkman.Context.Context ( Attribute (Attribute)
+                               , Context (Context)
+                               , Object (Object)
+                               )
 
 bruteForceConceptualCovers :: Context -> [[Concept]]
 bruteForceConceptualCovers c@(Context g m i) = go pcs []

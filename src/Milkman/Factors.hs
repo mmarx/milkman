@@ -9,11 +9,12 @@ import Data.Map.Strict ( elems
 import Data.Text (pack)
 
 import Milkman.Context ( Concept
-                       , Context (..)
                        , mkContext
-                       , unAttribute
-                       , unObject
                        )
+import Milkman.Context.Context ( Attribute (unAttribute)
+                               , Context (Context)
+                               , Object (unObject)
+                               )
 
 factorContexts :: Monad m => Context -> [Concept] -> m (Context, Context)
 factorContexts (Context g m _) cs = do
