@@ -1,9 +1,15 @@
-module Milkman.IO.Burmeister (parseBurmeister)
+{-# LANGUAGE BangPatterns, OverloadedStrings #-}
+module Milkman.IO.Burmeister ( parseBurmeister
+                             , showBurmeister
+                             )
        where
 
 import Control.Applicative ((<|>))
 import Data.Attoparsec.Text
-import Data.Text (Text)
+import Data.Text ( Text
+                 , pack
+                 )
+import qualified Data.Text as T
 
 import Milkman.Context
 
@@ -46,3 +52,22 @@ takeLine = do
   l <- takeTill isEndOfLine
   endOfLine <|> endOfInput
   return $! l
+
+showBurmeister :: Context -> Text
+showBurmeister c = T.unlines $ [ "B"
+                               , ""
+                               , pack $ show no
+                               , pack $ show na
+                               , ""
+                               ] ++ os ++ as ++ is
+  where (gs, os) = unzip $ objects c
+        (ms, as) = unzip $ attributes c
+        (no, na) = (length gs, length ms)
+        i = go [] $ incidence c
+        is = map (T.concat . map showCross) i
+        go :: [[Bool]] -> [Bool] -> [[Bool]]
+        go rs [] = rs
+        go !rs !rest = go (rs ++ [Prelude.take na rest]) $ drop na rest
+        showCross :: Bool -> Text
+        showCross True = "X"
+        showCross False = "."

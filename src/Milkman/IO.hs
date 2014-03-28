@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Milkman.IO
+module Milkman.IO ( parseFile
+                  , showBurmeister
+                  )
        where
 
 import Prelude hiding (FilePath)
@@ -22,7 +24,9 @@ import qualified Text.XML as X
 import Filesystem.Path.CurrentOS (FilePath)
 
 import Milkman.Context
-import Milkman.IO.Burmeister (parseBurmeister)
+import Milkman.IO.Burmeister ( parseBurmeister
+                             , showBurmeister
+                             )
 import Milkman.IO.Conexp (parseConexp)
 
 parseContext :: Monad m => Parser (m Context)
