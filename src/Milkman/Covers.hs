@@ -1,11 +1,18 @@
 {-# LANGUAGE BangPatterns #-}
 
+{- |
+Module      :  Milkman.Covers
+License     :  GPL-3
+Stability   :  experimental
+Portability :  unknown
+
+Computation of (minimal) conceptual covers of formal contexts
+-}
 module Milkman.Covers ( bruteForceConceptualCovers
                       , conceptCrosses
                       , conceptualCovers
                       , coversCrosses
-                      )
-       where
+                      ) where
 
 import Control.Applicative ((<$>))
 import Data.Function (on)
@@ -29,23 +36,23 @@ import Data.Set ( Set
 import Milkman.Context ( Concept
                        , Cross
                        , concepts
-                       , incident
-                       , objectAttributeConcepts
+                         , objectAttributeConcepts
                        , tightCrosses
                        )
-import Milkman.Context.Context ( Attribute (Attribute)
-                               , Context (Context)
-                               , Object (Object)
+import Milkman.Context.Context ( Context (Context)
+                               , incident
                                )
 
+-- |Compute all conceptual covers, using a brute-force approach.
+-- This might take a long time if the given context has lots of concepts.
 bruteForceConceptualCovers :: Context -> [[Concept]]
 bruteForceConceptualCovers c@(Context g m i) = go pcs []
   where pcs = filter admissible . subsequences . concepts $ c
         oacs = fromList $ objectAttributeConcepts c
         admissible = (oacs `isSubsetOf`) . fromList
         crosses = [ (o, a)
-                  | o <- Object <$> keys g
-                  , a <- Attribute <$> keys m
+                  | o <- keys g
+                  , a <- keys m
                   , incident i o a
                   ]
         allCovered pc = all (covered pc) crosses
@@ -56,18 +63,29 @@ bruteForceConceptualCovers c@(Context g m i) = go pcs []
           | otherwise = go ps cs
         go [] cs = cs
 
+
+-- |Find all crosses covered by a given concept.
 conceptCrosses :: Concept -> Set Cross
 conceptCrosses (ext, int) = fromList [ (o, a)
                                      | o <- ext
                                      , a <- int
                                      ]
 
+-- |Check whether a given cross is covered by a given concept.
 coversCross :: Cross -> Concept -> Bool
 coversCross (o, a) (ext, int) = o `elem` ext && a `elem` int
 
+-- |Check whether a given set of concepts covers a given set of crosses.
 coversCrosses :: [Concept] -> [Cross] -> Bool
 coversCrosses cs = all (\cr -> any (coversCross cr) cs)
 
+-- |Find all minimal conceptual covers.
+-- This algorithm exploits the facts that the concepts that are both
+-- object concepts and attribute concepts are contained in every
+-- cover, and that any cover only needs to cover the tight crosses,
+-- since any non-tight cross will be covered automatically. It also
+-- tries to prune potential covers that get too large from the search
+-- tree.
 conceptualCovers :: Monad m => Context -> m [[Concept]]
 conceptualCovers ctx = do
   let cs = concepts ctx
@@ -75,8 +93,8 @@ conceptualCovers ctx = do
       avail = cs \\ oacs
   Context gt mt it <- tightCrosses ctx
   let tights = [ (o, a)
-               | o <- Object <$> keys gt
-               , a <- Attribute <$> keys mt
+               | o <- keys gt
+               , a <- keys mt
                , incident it o a
                ]
       oaTight = nub [ (o, a)
@@ -96,14 +114,20 @@ conceptualCovers ctx = do
       mcs = filter ((dim==) . length) ccs
   return $! nub $ sort <$> mcs
 
-data State = State { candidates :: Map Cross [Concept]
-                   , preCover :: ![Concept]
-                   , remCrosses :: ![Cross]
-                   , allCrosses :: ![Cross]
-                   , sizeBound :: !Int
+-- |Search state for the minimal conceptual cover search
+data State = State { candidates :: Map Cross [Concept] -- ^ map from crosses to concepts covering them
+                   , preCover :: ![Concept]            -- ^ partial cover found thus far
+                   , remCrosses :: ![Cross]            -- ^ crosses that remain to be covered
+                   , allCrosses :: ![Cross]            -- ^ all of the crosses that should be covered
+                   , sizeBound :: !Int                 -- ^ size of the smallest cover seen so far
                    }
 
-initState :: Map Cross [Concept] -> [Concept] -> [Cross] -> [Cross] -> State
+-- |Initialize the search state
+initState :: Map Cross [Concept] -- ^ concepts that cover a given cross
+          -> [Concept]           -- ^ initial partial cover
+          -> [Cross]             -- ^ remaining crosses to cover
+          -> [Cross]             -- ^ complete list of crosses to cover
+          -> State
 initState cs pc rc ac = State { candidates = cs
                               , preCover = pc
                               , remCrosses = rc
@@ -111,6 +135,7 @@ initState cs pc rc ac = State { candidates = cs
                               , sizeBound = length ac
                               }
 
+-- |Add a new concept to the partial cover
 updateState :: (Cross, Concept) -> State -> State
 updateState (_, co) s = s' { sizeBound = bound }
   where preCover' = co : preCover s
@@ -122,9 +147,11 @@ updateState (_, co) s = s' { sizeBound = bound }
                   else sizeBound s
         uncovered c = not $ any (coversCross c) preCover'
 
+-- |Check whether the partial cover is already a cover for all the crosses
 isCover :: State -> Bool
 isCover s = null (remCrosses s) || coversCrosses (preCover s) (allCrosses s)
 
+-- |Try to cover the next uncovered cross
 step :: State -> [State]
 step s = if isCover s || length (preCover s) > sizeBound s
            then []
@@ -133,10 +160,12 @@ step s = if isCover s || length (preCover s) > sizeBound s
                                          | co <- candidates s ! cr
                                          ]
 
+-- |Find all remaining covers, starting from a given state
 search :: State -> [[Concept]]
 search s = if null $ remCrosses s
              then [preCover s]
              else step s >>= search
 
+-- |Find all eligible covers
 allCovers :: Map Cross [Concept] -> [Concept] -> [Cross] -> [Cross] -> [[Concept]]
 allCovers cs pc rc = search . initState cs pc rc

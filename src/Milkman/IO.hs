@@ -1,4 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+
+{- |
+Module      :  Milkman.IO
+License     :  GPL-3
+Stability   :  experimental
+Portability :  unknown
+
+I/O for formal contexts
+-}
+
 module Milkman.IO ( parseFile
                   , showBurmeister
                   )
@@ -29,9 +39,12 @@ import Milkman.IO.Burmeister ( parseBurmeister
                              )
 import Milkman.IO.Conexp (parseConexp)
 
+-- |Parser for context formats
 parseContext :: Monad m => Parser (m Context)
 parseContext = parseBurmeister
 
+-- |Try to parse a file as a formal context, returning either an error
+-- message, or the parsed context
 parseFile :: FilePath -> IO (Either String Context)
 parseFile file = do
   result <- try $ runResourceT $ sourceFile file

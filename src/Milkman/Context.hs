@@ -1,5 +1,14 @@
 {-# LANGUAGE BangPatterns, MultiParamTypeClasses, OverloadedStrings, TemplateHaskell, TypeFamilies, TypeOperators #-}
 
+{- |
+Module      :  Milkman.Context
+License     :  GPL-3
+Stability   :  experimental
+Portability :  unknown
+
+Basic algorithms and utilities for formal contexts
+-}
+
 module Milkman.Context ( Concept
                        , Context ()
                        , Cross
@@ -9,7 +18,6 @@ module Milkman.Context ( Concept
                        , complement
                        , concepts
                        , extent
-                       , incident
                        , incidence
                        , intent
                        , mkContext
@@ -23,7 +31,6 @@ module Milkman.Context ( Concept
                        ) where
 
 import Control.Applicative ((<$>))
-import Control.Arrow (first)
 import Control.Monad ( liftM
                      , when
                      )
@@ -66,11 +73,16 @@ import Milkman.Context.Context ( Attribute ( Attribute
                                , Object ( Object
                                         , unObject
                                         )
-                               , Incidence
                                , Names
+                               , incident
                                )
 
-mkContext :: Monad m => [Text] -> [Text] -> [[Bool]] -> m Context
+-- |Construct a formal context, performing sanity checks
+mkContext :: Monad m
+          => [Text]              -- ^ object names
+          -> [Text]              -- ^ attribute names
+          -> [[Bool]]            -- ^ incidence relation, in row-major order
+          -> m Context
 mkContext objs atts rows = do
   let nr = length rows
       nc = nub $ map length rows
@@ -84,72 +96,90 @@ mkContext objs atts rows = do
           m = fromList $ zip [0..] atts
           i = fromListUnboxed (Z :. no :. na :: DIM2) $ concat rows
 
+-- |Objects of a formal context
 objects :: Context -> [(Object, Text)]
-objects (Context g _ _) = map (first Object) $ assocs g
+objects (Context g _ _) = assocs g
 
+-- |Attributes of a formal context
 attributes :: Context -> [(Attribute, Text)]
-attributes (Context _ m _) = map (first Attribute) $ assocs m
+attributes (Context _ m _) = assocs m
 
+-- |Incidence relation of a formal context
 incidence :: Context -> [Bool]
 incidence (Context _ _ i) = toList i
 
-incident :: Incidence -> Object -> Attribute -> Bool
-incident i (Object o) (Attribute a) = i R.! (Z :. o :. a :: DIM2)
-
+-- |Compute the intent of an object, i.e. the set of all its
+-- attributes
 intent :: Context -> Object -> [Attribute]
 intent c obj = intent' c [obj]
 
+-- |Compute the intent of a set of objects, i.e. the set of all
+-- attributes that belong to all the objects
 intent' :: Context -> [Object] -> [Attribute]
 intent' (Context _ m i) objs = [ att
-                               | att <- Attribute <$> keys m
+                               | att <- keys m
                                , all (\obj -> incident i obj att) objs
                                ]
 
+-- |Compute the extent of an attribute, i.e. the set of all objects
+-- having it
 extent :: Context -> Attribute -> [Object]
 extent c att = extent' c [att]
 
+-- |Compute the extent of a set of attributes, i.e. the set of all
+-- objects that have all the attributes
 extent' :: Context -> [Attribute] -> [Object]
 extent' (Context g _ i) atts = [ obj
-                               | obj <- Object <$> keys g
+                               | obj <- keys g
                                , all (incident i obj) atts
                                ]
 
+-- |Compute the complementary context, complementing the incidence
+-- relation
 complement :: Monad m => Context -> m Context
 complement (Context g m i) = Context g m `liftM` computeUnboxedP (R.map not i)
 
-clarify' :: Names -> [(Int, [Int])] -> (Names, [Int])
-clarify' n is = let ub = length is - 1
-                    ps = [ (i, j)
-                         | (i, ii) <- is
-                         , (j, ij) <- is
-                         , ii == ij
-                         , i <= j
-                         ]
-                    es = [ (i, map snd $ filter ((i==) . fst) ps)
-                         | i <- [0..ub]
-                         , i `notElem` [ j'
-                                       | (i', j') <- ps
-                                       , i' < i
-                                       ]
-                         ]
-                    e' = [ (i, intercalate "/" [ n ! j
-                                               | j <- js
-                                               ])
-                         | (i, js) <- es
-                         ]
-                    rs = [0..ub] \\ map fst e'
-                in (fromList $ zip [0..] $ map snd e', rs)
+-- |Aggregate names
+clarify' :: (Enum a, Ord a, Num a)
+            => (Int -> a)         -- ^ object/attribute wrapper constructor
+            -> Names a           -- ^ un-aggregated name map
+            -> [(Int, [Int])]    -- ^ indices to be aggregated as another index
+            -> (Names a, [Int])  -- ^ aggregated names and removed indices
+clarify' c n is = let ub = length is - 1
+                      ps = [ (i, j)
+                           | (i, ii) <- is
+                           , (j, ij) <- is
+                           , ii == ij
+                           , i <= j
+                           ]
+                      es = [ (i, map snd $ filter ((i==) . fst) ps)
+                           | i <- [0..ub]
+                           , i `notElem` [ j'
+                                         | (i', j') <- ps
+                                         , i' < i
+                                         ]
+                           ]
+                      e' = [ (i, intercalate "/" [ n ! c j
+                                                 | j <- js
+                                                 ])
+                           | (i, js) <- es
+                           ]
+                      rs = [0..ub] \\ map fst e'
+                  in (fromList $ zip [0..] $ map snd e', rs)
 
+-- |Clarify a given context
 clarify :: Monad m => Context -> m Context
 clarify c@(Context g m i) = do
   let no = length $ keys g
       na = length $ keys m
-      (g', ro) = clarify' g [ (j, unAttribute <$> intent c (Object j))
-                            | j <- [0..(no - 1)]
-                            ]
-      (m', ra) = clarify' m [ (j, unObject <$> extent c (Attribute j))
-                            | j <- [0..(na - 1)]
-                            ]
+      (g', ro) = clarify' Object g
+                          [ (j, unAttribute <$> intent c (Object j))
+                          | j <- [0..(no - 1)]
+                          ]
+      (m', ra) = clarify' Attribute m
+                          [ (j, unObject <$> extent c (Attribute j))
+                          | j <- [0..(na - 1)]
+                          ]
   return $! Context g' m'
          $! fromListUnboxed (Z :. length (keys g')
                              :. length (keys m')
@@ -160,22 +190,34 @@ clarify c@(Context g m i) = do
          , (j `mod` na) `notElem` ra
          ]
 
-data Arrows = UpArrow
-            | DownArrow
-            | UpDownArrow
-            | Cross
-            | Empty
-            deriving (Read, Show, Eq, Ord, Enum)
+-- |Values for augmented contexts
+data Arrows = UpArrow           -- ^ upward arrow
+            | DownArrow         -- ^ downward arrow
+            | UpDownArrow       -- ^ double arrow
+            | Cross             -- ^ cross
+            | Empty             -- ^ nothing
+            deriving ( Enum
+                     , Eq
+                     , Ord
+                     , Read
+                     , Show
+                     )
 
 derivingUnbox "Arrows"
   [t|Arrows -> Int|]
   [|fromEnum|]
   [|toEnum|]
 
+-- |Incidence relation of an augmented context
 type AugmentedIncidence = Array U DIM2 Arrows
-data AugmentedContext = AugmentedContext Names Names AugmentedIncidence
+-- |Augmented context
+data AugmentedContext = AugmentedContext (Names Object)
+                                         (Names Attribute)
+                                         AugmentedIncidence
                         deriving (Show)
 
+-- |Check whether a given object/attribute pair is incident in the
+-- upward arrow relation
 isUpArrow :: Context -> Object -> Attribute -> Bool
 isUpArrow c@(Context _ _ i) g m
   | incident i g m = False
@@ -187,6 +229,8 @@ isUpArrow c@(Context _ _ i) g m
                                         in m' `S.isProperSubsetOf` n'
                                       ]
 
+-- |Check whether a given object/attribute pair is incident in the
+-- downward arrow relation
 isDownArrow :: Context -> Object -> Attribute -> Bool
 isDownArrow c@(Context _ _ i) g m
   | incident i g m = False
@@ -198,6 +242,7 @@ isDownArrow c@(Context _ _ i) g m
                                                in g' `S.isProperSubsetOf` h'
                                              ]
 
+-- |Augment a context by extending it with the arrow relations
 augment :: Context -> AugmentedContext
 augment c@(Context g m i) = AugmentedContext g m i'
   where no = length $ keys g
@@ -215,11 +260,13 @@ augment c@(Context g m i) = AugmentedContext g m i'
           | isDownArrow c j k                   = DownArrow
           | otherwise                           = Empty
 
+-- |Diminish an augmented context, dropping the arrows
 diminish :: Monad m => AugmentedContext -> m Context
 diminish (AugmentedContext g m j) = do
   i <- computeUnboxedP . R.map (==Cross) $ j
   return $! Context g m i
 
+-- |Reduce (and clarify) a given formal context
 reduce :: Monad m => Context -> m Context
 reduce c = do
   AugmentedContext g m i <- augment `liftM` clarify c
@@ -240,39 +287,50 @@ reduce c = do
                             :: DIM2)
          [ e
          | (j, e) <- zip [0..] $ toList i
-         , (j `div` na) `notElem` ro
-         , (j `mod` na) `notElem` ra
+         , (j `div` na) `notElem` (unObject <$> ro)
+         , (j `mod` na) `notElem` (unAttribute <$> ra)
          ]
   diminish $! AugmentedContext g' m' i'
   where filt l = map fst $ filter (notElem UpDownArrow . snd) $ zip [0..] l
 
+-- |Cross in a formal context
 type Cross = (Object, Attribute)
+
+-- |formal concept
 type Concept = ([Object], [Attribute])
 
+-- |Compute the object concept induced by an object
 objectConcept :: Context -> Object -> Concept
 objectConcept c g = (g'', g')
   where g' = intent c g
         g'' = extent' c g'
 
+-- |Compute the attribute concept induced by an attribute
 attributeConcept :: Context -> Attribute -> Concept
 attributeConcept c m = (m', m'')
   where m' = extent c m
         m'' = intent' c m'
 
+-- |Compute the set of concepts that are both object concepts and
+-- attribute concepts
 objectAttributeConcepts :: Context -> [Concept]
 objectAttributeConcepts c@(Context g m _) = ocs `intersect` acs
-  where ocs = map (objectConcept c) $ Object <$> keys g
-        acs = map (attributeConcept c) $ Attribute <$> keys m
+  where ocs = map (objectConcept c) $ keys g
+        acs = map (attributeConcept c) $ keys m
 
+-- |Compute the tight crosses (the double arrows of the complementary
+-- context) of a given formal context
 tightCrosses :: Monad m => Context -> m Context
 tightCrosses c@(Context g m _) = do
   (AugmentedContext _ _ j) <- augment `liftM` complement c
   i' <- computeUnboxedP . R.map (==UpDownArrow) $ j
   return $! Context g m i'
 
+-- |Pretty-print the incidence relation of an augmented context
 showAugmented :: AugmentedContext -> String
-showAugmented (AugmentedContext g m i) = unlines [ concatMap (showI o) $ keys m
-                                                 | o <- keys g
+showAugmented (AugmentedContext g m i) = unlines [ concatMap (showI o)
+                                                   $ unAttribute <$> keys m
+                                                 | o <- unObject <$> keys g
                                                  ]
   where showI o a = case i R.! (Z :. o :. a :: DIM2) of
           UpArrow -> "↗"
@@ -281,17 +339,19 @@ showAugmented (AugmentedContext g m i) = unlines [ concatMap (showI o) $ keys m
           Cross -> "✘"
           Empty -> "⋅"
 
+-- |Pretty-print the incidence relation of a formal context
 showIncidence :: Context -> String
-showIncidence (Context g m i) = unlines [ concatMap (showI o) $ Attribute <$> keys m
-                                        | o <- Object <$> keys g
+showIncidence (Context g m i) = unlines [ concatMap (showI o) $ keys m
+                                        | o <- keys g
                                         ]
   where showI o a
           | incident i o a = "✘"
           | otherwise = "⋅"
 
 
+-- |Compute the concepts of a formal context
 concepts :: Context -> [Concept]
-concepts c@(Context g m _) = go (Attribute <$> keys m) [Object <$> keys g]
+concepts c@(Context g m _) = go (keys m) [keys g]
   where go (a:as) !exts = go as $ nub $ exts ++ [ let a' = extent c a
                                                   in e `intersect` a'
                                                 | e <- exts
