@@ -19,6 +19,7 @@ library
                      , Milkman.Factors
                      , Milkman.IO
   other-modules:       Milkman.Context.Context
+                     , Milkman.Covers.Conceptual
                      , Milkman.IO.Burmeister
                      , Milkman.IO.Conexp
   other-extensions:    BangPatterns
