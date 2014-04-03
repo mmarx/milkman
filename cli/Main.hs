@@ -19,7 +19,9 @@ import Milkman.Context ( Concept
                        , showIncidence
                        , tightCrosses
                        )
-import Milkman.Covers (conceptualCovers)
+import Milkman.Covers ( conceptualCovers
+                      , minimalCovers
+                      )
 import Milkman.Factors (factorContexts)
 
 writeFactors :: String -> Context -> (Int, [Concept]) -> IO ()
@@ -39,6 +41,15 @@ writeFactors base cxt (idx, cover) = do
   writeFile (base' ++ "-objects" <.> "cxt") $ showBurmeister gf
   writeFile (base' ++ "-attributes" <.> "cxt") $ showBurmeister fm
 
+  let (mo, ma) = minimalCovers cover
+  print . length $ mo
+  putStrLn ""
+  mapM_ (\s -> print s >> putStrLn "") mo
+
+  print . length $ ma
+  putStrLn ""
+  mapM_ (\s -> print s >> putStrLn "") ma
+
 factor :: String -> IO ()
 factor s = do
   eec <- parseFile $ fromString s
@@ -53,7 +64,7 @@ factor s = do
       print . length $ cs
       putStrLn ""
 
-      mapM_ (writeFactors s cxt) $ zip [1..] cs
+      mapM_ (writeFactors s cxt) $ zip [1..] (take 1 cs)
 
       tis <- tightCrosses cxt
       put tis

@@ -20,6 +20,7 @@ library
                      , Milkman.IO
   other-modules:       Milkman.Context.Context
                      , Milkman.Covers.Conceptual
+                     , Milkman.Covers.Preconceptual
                      , Milkman.IO.Burmeister
                      , Milkman.IO.Conexp
   other-extensions:    BangPatterns
