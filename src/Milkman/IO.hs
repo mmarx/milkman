@@ -19,19 +19,21 @@ import Prelude hiding (FilePath)
 import Control.Exception ( try
                          , SomeException
                          )
+import Control.Monad.Trans.Resource (runResourceT)
 import Data.Attoparsec.Text (Parser)
 import Data.Conduit ( ($$)
                     , (=$)
-                    , runResourceT
                    )
 import Data.Conduit.Attoparsec (sinkParser)
-import Data.Conduit.Filesystem (sourceFile)
+import Data.Conduit.Binary (sourceFile)
 import Data.Conduit.Text ( decode
                          , utf8
                          )
 import Data.Monoid ((<>))
 import qualified Text.XML as X
-import Filesystem.Path.CurrentOS (FilePath)
+import Filesystem.Path.CurrentOS ( FilePath
+                                 , encodeString
+                                 )
 
 import Milkman.Context
 import Milkman.IO.Burmeister ( parseBurmeister
@@ -47,7 +49,7 @@ parseContext = parseBurmeister
 -- message, or the parsed context
 parseFile :: FilePath -> IO (Either String Context)
 parseFile file = do
-  result <- try $ runResourceT $ sourceFile file
+  result <- try $ runResourceT $ sourceFile (encodeString file)
             $$ decode utf8
             =$ sinkParser parseContext
   case result of
