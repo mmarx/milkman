@@ -58,3 +58,8 @@ executable milkman
                      , filepath == 1.3.*
                      , milkman
                      , text == 1.1.*
+
+source-repository head
+  type:                git
+  location:            https://github.com/mmarx/milkman.git
+  branch:              master
