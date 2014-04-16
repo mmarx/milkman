@@ -2,9 +2,11 @@
 *~
 .hsenv/
 .hsenv_*/
+.tasty-rerun-log
 hsenv.log
 dist/
 dist_*/
 *.hp
 *.prof
 *.ps
+*flycheck-*.hs

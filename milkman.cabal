@@ -60,6 +60,33 @@ executable milkman
                      , milkman
                      , text == 1.1.*
 
+test-suite test-milkman
+  default-language:    Haskell2010
+  ghc-options:         -Wall -Werror -O2 -rtsopts=all -threaded
+                       -fno-warn-missing-signatures
+                       -fno-warn-orphans
+                       -fno-warn-unused-imports
+  ghc-prof-options:    -prof -auto-all -caf-all -rtsopts=all
+  hs-source-dirs:      test
+  type:                exitcode-stdio-1.0
+  main-is:             Test.hs
+  other-extensions:    OverloadedStrings
+                     , TemplateHaskell
+  build-depends:       base >= 4.6 && <4.7
+                     , milkman
+                     , split == 0.2.*
+                     , tasty == 0.8.*
+                     , tasty-ant-xml == 1.0.*
+                     , tasty-golden == 2.2.*
+                     , tasty-hunit == 0.8.*
+                     , tasty-quickcheck == 0.8.*
+                     , tasty-rerun == 1.1.*
+                     , tasty-smallcheck == 0.8.*
+                     , tasty-th == 0.1.*
+                     , text == 1.1.*
+                     , QuickCheck == 2.6.*
+                     , quickcheck-instances == 0.3.*
+
 source-repository head
   type:                git
   location:            https://github.com/mmarx/milkman.git
