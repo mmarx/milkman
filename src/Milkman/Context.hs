@@ -84,6 +84,8 @@ mkContext :: Monad m
 mkContext objs atts rows = do
   let nr = length rows
       nc = nub $ map length rows
+  when (no == 0) $ fail "No objects."
+  when (na == 0) $ fail "No attributes."
   when (no /= nr) $ fail "Number of objects does not match number of rows."
   when (length nc /= 1) $ fail "Non-uniform number of columns."
   when (any (na/=) nc) $ fail "Number of attributes does not match number of columns."
