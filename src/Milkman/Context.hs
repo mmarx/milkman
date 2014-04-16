@@ -31,9 +31,7 @@ module Milkman.Context ( Concept
                        ) where
 
 import Control.Applicative ((<$>))
-import Control.Monad ( liftM
-                     , when
-                     )
+import Control.Monad (when)
 import Data.List ( (\\)
                  , intersect
                  , nub
@@ -44,7 +42,7 @@ import Data.Text ( Text
                  , intercalate
                  )
 import Data.Array.Repa ( Array
-                       , computeUnboxedP
+                       , computeUnboxedS
                        , fromListUnboxed
                        , toList
                        , U
@@ -136,8 +134,9 @@ extent' (Context g _ i) atts = [ obj
 
 -- |Compute the complementary context, complementing the incidence
 -- relation
-complement :: Monad m => Context -> m Context
-complement (Context g m i) = Context g m `liftM` computeUnboxedP (R.map not i)
+complement :: Context -> Context
+complement (Context g m i) = Context g m i'
+  where i' = computeUnboxedS $ R.map not i
 
 -- |Aggregate names
 clarify' :: (Enum a, Ord a, Num a)
@@ -168,7 +167,7 @@ clarify' c n is = let ub = length is - 1
                   in (fromList $ zip [0..] $ map snd e', rs)
 
 -- |Clarify a given context
-clarify :: Monad m => Context -> m Context
+clarify :: Context -> Context
 clarify c@(Context g m i) = do
   let no = length $ keys g
       na = length $ keys m
@@ -180,15 +179,15 @@ clarify c@(Context g m i) = do
                           [ (j, unObject <$> extent c (Attribute j))
                           | j <- [0..(na - 1)]
                           ]
-  return $! Context g' m'
-         $! fromListUnboxed (Z :. length (keys g')
-                             :. length (keys m')
-                             :: DIM2)
-         [ e
-         | (j, e) <- zip [0..] $ toList i
-         , (j `div` na) `notElem` ro
-         , (j `mod` na) `notElem` ra
-         ]
+    in Context g' m'
+       $! fromListUnboxed (Z :. length (keys g')
+                           :. length (keys m')
+                           :: DIM2)
+       [ e
+       | (j, e) <- zip [0..] $ toList i
+       , (j `div` na) `notElem` ro
+       , (j `mod` na) `notElem` ra
+       ]
 
 -- |Values for augmented contexts
 data Arrows = UpArrow           -- ^ upward arrow
@@ -261,36 +260,34 @@ augment c@(Context g m i) = AugmentedContext g m i'
           | otherwise                           = Empty
 
 -- |Diminish an augmented context, dropping the arrows
-diminish :: Monad m => AugmentedContext -> m Context
-diminish (AugmentedContext g m j) = do
-  i <- computeUnboxedP . R.map (==Cross) $ j
-  return $! Context g m i
+diminish :: AugmentedContext -> Context
+diminish (AugmentedContext g m i) = Context g m i'
+  where i' = computeUnboxedS $ R.map (==Cross) $ i
 
 -- |Reduce (and clarify) a given formal context
-reduce :: Monad m => Context -> m Context
-reduce c = do
-  AugmentedContext g m i <- augment `liftM` clarify c
-  let [na, no] = listOfShape $ R.extent i
-      rs = chunksOf no $ toList i
-      ro = filt rs
-      ra = filt $ transpose rs
-      g' = fromList $ zip [0..] [ g ! j
-                                | j <- keys g
-                                , j `notElem` ro
-                                ]
-      m' = fromList $ zip [0..] [ m ! j
-                                | j <- keys m
-                                , j `notElem` ra
-                                ]
-      i' = fromListUnboxed (Z :. length (keys g')
-                            :. length (keys m')
-                            :: DIM2)
-         [ e
-         | (j, e) <- zip [0..] $ toList i
-         , (j `div` na) `notElem` (unObject <$> ro)
-         , (j `mod` na) `notElem` (unAttribute <$> ra)
-         ]
-  diminish $! AugmentedContext g' m' i'
+reduce :: Context -> Context
+reduce c = let AugmentedContext g m i = augment . clarify $ c
+               [na, no] = listOfShape $ R.extent i
+               rs = chunksOf no $ toList i
+               ro = filt rs
+               ra = filt $ transpose rs
+               g' = fromList $ zip [0..] [ g ! j
+                                         | j <- keys g
+                                         , j `notElem` ro
+                                         ]
+               m' = fromList $ zip [0..] [ m ! j
+                                         | j <- keys m
+                                         , j `notElem` ra
+                                         ]
+               i' = fromListUnboxed (Z :. length (keys g')
+                                     :. length (keys m')
+                                     :: DIM2)
+                    [ e
+                    | (j, e) <- zip [0..] $ toList i
+                    , (j `div` na) `notElem` (unObject <$> ro)
+                    , (j `mod` na) `notElem` (unAttribute <$> ra)
+                    ]
+           in diminish $! AugmentedContext g' m' i'
   where filt l = map fst $ filter (notElem UpDownArrow . snd) $ zip [0..] l
 
 -- |Cross in a formal context
@@ -320,11 +317,10 @@ objectAttributeConcepts c@(Context g m _) = ocs `intersect` acs
 
 -- |Compute the tight crosses (the double arrows of the complementary
 -- context) of a given formal context
-tightCrosses :: Monad m => Context -> m Context
-tightCrosses c@(Context g m _) = do
-  (AugmentedContext _ _ j) <- augment `liftM` complement c
-  i' <- computeUnboxedP . R.map (==UpDownArrow) $ j
-  return $! Context g m i'
+tightCrosses :: Context -> Context
+tightCrosses c@(Context g m _) = Context g m i'
+  where (AugmentedContext _ _ i) = augment . complement $ c
+        i' = computeUnboxedS . R.map (==UpDownArrow) $ i
 
 -- |Pretty-print the incidence relation of an augmented context
 showAugmented :: AugmentedContext -> String

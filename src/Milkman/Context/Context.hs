@@ -39,7 +39,9 @@ type Incidence = Array U DIM2 Bool
 
 -- |Formal context
 data Context = Context (Names Object) (Names Attribute) Incidence
-             deriving (Show)
+             deriving ( Eq
+                      , Show
+                      )
 
 -- |Object of a formal context
 newtype Object = Object { unObject :: Int }

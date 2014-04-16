@@ -87,33 +87,34 @@ coversCrosses cs = all (\cr -> any (coversCross cr) cs)
 -- since any non-tight cross will be covered automatically. It also
 -- tries to prune potential covers that get too large from the search
 -- tree.
-conceptualCovers :: Monad m => Context -> m [[Concept]]
-conceptualCovers ctx = do
-  let cs = concepts ctx
-      oacs = objectAttributeConcepts ctx
-      avail = cs \\ oacs
-  Context gt mt it <- tightCrosses ctx
-  let tights = [ (o, a)
-               | o <- keys gt
-               , a <- keys mt
-               , incident it o a
-               ]
-      oaTight = nub [ (o, a)
-                    | (ext, int) <- oacs
-                    , o <- ext
-                    , a <- int
-                    , incident it o a
-                    ]
-      remTight = tights \\ oaTight
-      tightConcepts = fromListWith (++) [ (t, filter (coversCross t) avail)
-                                        | t <- remTight
-                                        ]
-      tcs = map fst $ sortBy (compare `on` (length . snd))
-                    $ toList tightConcepts
-      ccs = allCovers tightConcepts oacs tcs tights
-      dim = minimum $ length <$> ccs
-      mcs = filter ((dim==) . length) ccs
-  return $! nub $ sort <$> mcs
+conceptualCovers :: Context -> [[Concept]]
+conceptualCovers ctx = let cs = concepts ctx
+                           oacs = objectAttributeConcepts ctx
+                           avail = cs \\ oacs
+                           Context gt mt it = tightCrosses ctx
+                           tights = [ (o, a)
+                                    | o <- keys gt
+                                    , a <- keys mt
+                                    , incident it o a
+                                    ]
+                           oaTight = nub [ (o, a)
+                                         | (ext, int) <- oacs
+                                         , o <- ext
+                                         , a <- int
+                                         , incident it o a
+                                         ]
+                           remTight = tights \\ oaTight
+                           tightConcepts = fromListWith (++)
+                                           [ (t, filter (coversCross t) avail)
+                                           | t <- remTight
+                                           ]
+                           tcs = map fst
+                                 $ sortBy (compare `on` (length . snd))
+                                 $ toList tightConcepts
+                           ccs = allCovers tightConcepts oacs tcs tights
+                           dim = minimum $ length <$> ccs
+                           mcs = filter ((dim==) . length) ccs
+                       in nub $ sort <$> mcs
 
 -- |Search state for the minimal conceptual cover search
 data State = State { candidates :: Map Cross [Concept] -- ^ map from crosses to concepts covering them

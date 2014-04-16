@@ -58,7 +58,7 @@ factor s = do
     Right cxt -> do
       put cxt
 
-      cs <- conceptualCovers cxt
+      let cs = conceptualCovers cxt
 
       print . length $ concepts cxt
       print . length $ cs
@@ -66,7 +66,7 @@ factor s = do
 
       mapM_ (writeFactors s cxt) $ zip [1..] (take 1 cs)
 
-      tis <- tightCrosses cxt
+      let tis = tightCrosses cxt
       put tis
   where put c = putStrLn (showIncidence c) >> putStrLn ""
 
