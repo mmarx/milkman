@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Milkman.ContextTests (testContext) where
 
-import qualified Test.QuickCheck.Monadic as QC
 import Test.Tasty (TestTree)
 import Test.Tasty.TH (testGroupGenerator)
 import Test.Tasty.HUnit
