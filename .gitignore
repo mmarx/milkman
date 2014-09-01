@@ -10,3 +10,5 @@ dist_*/
 *.prof
 *.ps
 *flycheck-*.hs
+cabal.sandbox.config
+.cabal-sandbox
