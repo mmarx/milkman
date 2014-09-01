@@ -30,8 +30,8 @@ library
                      , TypeFamilies
                      , TypeOperators
   build-depends:       base >=4.6 && <4.7
-                     , attoparsec == 0.11.*
-                     , conduit == 1.1.*
+                     , attoparsec == 0.12.*
+                     , conduit == 1.2.*
                      , conduit-combinators == 0.2.*
                      , conduit-extra == 1.1.*
                      , containers == 0.5.*

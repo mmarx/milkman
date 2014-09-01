@@ -59,8 +59,6 @@ import Data.Map.Strict ( (!)
                        , keys
                        )
 import qualified Data.Set as S
-import qualified Data.Vector.Generic
-import qualified Data.Vector.Generic.Mutable
 import Data.Vector.Unboxed.Base ()
 import Data.Vector.Unboxed.Deriving (derivingUnbox)
 
