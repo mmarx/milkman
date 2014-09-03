@@ -49,13 +49,13 @@ writeFactors opts input cxt cs@(idx, cover) = do
        ma' = map (map ((return *** return) . swap)) ma
        write' = write . (((show idx) <> "-")++)
 
-   putStrLn ("Context has "
+   putStrLn ("Factorization has "
              <> (show . length $ mo)
              <> " minimal object covers.")
    putStrLn ""
    mapM_ (write' "minimal-objects") $ zip [1..] mo'
 
-   putStrLn ("Context has "
+   putStrLn ("Factorization has "
              <> (show . length $ ma)
              <> " minimal attribute covers.")
    putStrLn ""
@@ -126,7 +126,7 @@ options = Options
           <*> switch (long "verbose"
                       <> short 'v'
                       <> help "Whether to additional information")
-          <*> switch (long "minimal-covers"
+          <*> switch (long "pre-conceptual"
                       <> help ("Whether to to generate minimal "
                       ++ "pre-conceptual covers instead of conceptual covers"))
           <*> many (argument str $ metavar "CONTEXTS...")
