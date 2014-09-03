@@ -3,9 +3,12 @@ module Main (main)
 
 import Prelude hiding (writeFile)
 
+import Control.Arrow ((***))
 import Control.Monad (when)
+import Data.List (intersperse)
 import Data.String (fromString)
 import Data.Text.IO (writeFile)
+import Data.Tuple (swap)
 import System.FilePath ( (<.>)
                        , (</>)
                        , takeBaseName
@@ -36,13 +39,42 @@ put :: Context -> IO ()
 put c = putStrLn (showIncidence c) >> putStrLn ""
 
 writeFactors :: Options -> String -> Context -> (Int, [Concept]) -> IO ()
-writeFactors opts input cxt (idx, cover) = do
-  let out n = concat [ outputPrefix opts </> takeBaseName input
-                     , "-factorization-"
-                     , show idx
-                     , "-"
-                     , n
-                     ] <.> "cxt"
+writeFactors opts input cxt cs@(idx, cover) = do
+  let write = writeFactors' opts cxt input
+  write "" cs
+
+  when (preconceptual opts) $ do
+   let (mo, ma) = minimalCovers cover
+       mo' = map (map (return *** return)) mo
+       ma' = map (map ((return *** return) . swap)) ma
+       write' = write . (((show idx) <> "-")++)
+
+   putStrLn ("Context has "
+             <> (show . length $ mo)
+             <> " minimal object covers.")
+   putStrLn ""
+   mapM_ (write' "minimal-objects") $ zip [1..] mo'
+
+   putStrLn ("Context has "
+             <> (show . length $ ma)
+             <> " minimal attribute covers.")
+   putStrLn ""
+   mapM_ (write' "minimal-attributes") $ zip [1..] ma'
+
+writeFactors' :: Options
+              -> Context
+              -> String
+              -> String
+              -> (Int, [Concept])
+              -> IO ()
+writeFactors' opts cxt input extra (idx, cover) = do
+  let out n = (concat $ intersperse "-" $ filter (/="")
+               [ outputPrefix opts </> takeBaseName input
+               , "factorization"
+               , extra
+               , show idx
+               , n
+               ]) <.> "cxt"
   (gf, fm) <- factorContexts cxt cover
 
   when (verbose opts) $ do
@@ -54,16 +86,6 @@ writeFactors opts input cxt (idx, cover) = do
   writeFile (out "objects") $ showBurmeister gf
   putStrLn $ "Writing `" <> (out "attributes") <> "'."
   writeFile (out "attributes") $ showBurmeister fm
-
-  when (preconceptual opts) $ do
-    let (mo, ma) = minimalCovers cover
-    print . length $ mo
-    putStrLn ""
-    mapM_ (\s -> print s >> putStrLn "") mo
-
-    print . length $ ma
-    putStrLn ""
-    mapM_ (\s -> print s >> putStrLn "") ma
 
 factor :: Options -> IO ()
 factor opts = do
