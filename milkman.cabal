@@ -1,5 +1,5 @@
 name:                milkman
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Boolean factor analysis
 description:         Compute boolean factorizations of formal contexts
 homepage:            http://github.com/mmarx/milkman
