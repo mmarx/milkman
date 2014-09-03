@@ -1,7 +1,7 @@
 name:                milkman
 version:             0.1.0.0
 synopsis:            Boolean factor analysis
--- description:
+description:         Compute boolean factorizations of formal contexts
 homepage:            http://github.com/mmarx/milkman
 license:             GPL-3
 license-file:        LICENSE
@@ -10,7 +10,6 @@ maintainer:          mmarx@wh2.tu-dresden.de
 copyright:           (c) 2014 Maximilian Marx
 category:            Math
 build-type:          Simple
--- extra-source-files:
 cabal-version:       >=1.10
 
 Flag Static
