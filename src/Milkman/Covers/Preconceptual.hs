@@ -23,6 +23,7 @@ import Milkman.Context.Context ( Attribute (..)
                                , Object (..)
                                )
 
+-- |Find all minimal preconceptual covers
 minimalCovers :: [Concept] -> ([[(Object, Attribute)]], [[(Attribute, Object)]])
 minimalCovers cover = (moc, mac)
   where minimize = minimizeCover cover
@@ -41,11 +42,15 @@ minimalCovers cover = (moc, mac)
                                 , js = subtract 1 . length . snd . (cover!!)
                                 }
 
-data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int])
-                         , js :: Int -> Int
+-- |Search state for the minimal preconceptual cover search
+data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int]) -- ^ FIXME
+                         , js :: Int -> Int                 -- ^ FIXME
                          }
 
-minimizeCover :: [Concept] -> Minimize -> [[(Int, Int)]]
+-- |Find all minimal preconceptual covers of a given conceptual cover
+minimizeCover :: [Concept]       -- ^ conceptual cover
+              -> Minimize        -- ^ search state
+              -> [[(Int, Int)]]  -- ^ minimal preconceptual covers
 minimizeCover cover mi = go (0, 0) [] []
   where is = length cover - 1
         go :: (Int, Int) -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]

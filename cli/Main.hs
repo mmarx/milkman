@@ -35,10 +35,16 @@ data Options = Options { outputPrefix :: String
                        , inputFiles :: [String]
                        }
 
+-- |Pretty-print a context
 put :: Context -> IO ()
 put c = putStrLn (showIncidence c) >> putStrLn ""
 
-writeFactors :: Options -> String -> Context -> (Int, [Concept]) -> IO ()
+-- |Write factorization to disk
+writeFactors :: Options          -- ^ CLI options
+             -> String           -- ^ input basename
+             -> Context          -- ^ factored context
+             -> (Int, [Concept]) -- ^ index, conceptual cover
+             -> IO ()
 writeFactors opts input cxt cs@(idx, cover) = do
   let write = writeFactors' opts cxt input
   write "" cs
@@ -61,11 +67,12 @@ writeFactors opts input cxt cs@(idx, cover) = do
    putStrLn ""
    mapM_ (write' "minimal-attributes") $ zip [1..] ma'
 
-writeFactors' :: Options
-              -> Context
-              -> String
-              -> String
-              -> (Int, [Concept])
+-- |Actually write the factorization to disk
+writeFactors' :: Options         -- ^ CLI options
+              -> Context         -- ^ context
+              -> String          -- ^ input basename
+              -> String          -- ^ extra annotation
+              -> (Int, [Concept]) -- ^ index, cover
               -> IO ()
 writeFactors' opts cxt input extra (idx, cover) = do
   let out n = intercalate "-" (filter (/="")
@@ -87,6 +94,7 @@ writeFactors' opts cxt input extra (idx, cover) = do
   putStrLn $ "Writing `" <> out "attributes" <> "'."
   writeFile (out "attributes") $ showBurmeister fm
 
+- |Factor all contexts given as CLI arguments
 factor :: Options -> IO ()
 factor opts = do
   when (verbose opts) $ do
@@ -96,6 +104,7 @@ factor opts = do
               <> "conceptual covers.")
   mapM_ (factor' opts) $ inputFiles opts
 
+-- |Factor a context given as a CLI argument
 factor' :: Options -> String -> IO ()
 factor' opts s = do
   putStrLn $ "Processing `" <> s <> "'."
@@ -117,6 +126,7 @@ factor' opts s = do
 
       mapM_ (writeFactors opts s cxt) $ zip [1..] cs
 
+-- |Parser for CLI options
 options :: Parser Options
 options = Options
           <$> strOption (long "output-prefix"
@@ -132,6 +142,7 @@ options = Options
           <*> many (argument str $ metavar "CONTEXTS...")
 
 
+-- |Entry point
 main :: IO ()
 main = execParser opts >>= factor
   where opts = info (helper <*> options)
