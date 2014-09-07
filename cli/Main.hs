@@ -5,7 +5,7 @@ import Prelude hiding (writeFile)
 
 import Control.Arrow ((***))
 import Control.Monad (when)
-import Data.List (intersperse)
+import Data.List (intercalate)
 import Data.String (fromString)
 import Data.Text.IO (writeFile)
 import Data.Tuple (swap)
@@ -47,7 +47,7 @@ writeFactors opts input cxt cs@(idx, cover) = do
    let (mo, ma) = minimalCovers cover
        mo' = map (map (return *** return)) mo
        ma' = map (map ((return *** return) . swap)) ma
-       write' = write . (((show idx) <> "-")++)
+       write' = write . ((show idx <> "-")++)
 
    putStrLn ("Factorization has "
              <> (show . length $ mo)
@@ -68,23 +68,23 @@ writeFactors' :: Options
               -> (Int, [Concept])
               -> IO ()
 writeFactors' opts cxt input extra (idx, cover) = do
-  let out n = (concat $ intersperse "-" $ filter (/="")
-               [ outputPrefix opts </> takeBaseName input
-               , "factorization"
-               , extra
-               , show idx
-               , n
-               ]) <.> "cxt"
+  let out n = intercalate "-" (filter (/="")
+              [ outputPrefix opts </> takeBaseName input
+              , "factorization"
+              , extra
+              , show idx
+              , n
+              ]) <.> "cxt"
   (gf, fm) <- factorContexts cxt cover
 
   when (verbose opts) $ do
-    putStrLn $ "Factorization " <> (show idx) <> ":"
+    putStrLn $ "Factorization " <> show idx <> ":"
     put gf
     put fm
 
-  putStrLn $ "Writing `" <> (out "objects") <> "'."
+  putStrLn $ "Writing `" <> out "objects" <> "'."
   writeFile (out "objects") $ showBurmeister gf
-  putStrLn $ "Writing `" <> (out "attributes") <> "'."
+  putStrLn $ "Writing `" <> out "attributes" <> "'."
   writeFile (out "attributes") $ showBurmeister fm
 
 factor :: Options -> IO ()

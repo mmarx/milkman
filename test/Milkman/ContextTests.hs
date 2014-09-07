@@ -37,14 +37,13 @@ case_mkContextAttributeColsFails = mkContext ["Foo", "Bar"]
                                    ]
                                    @?= Nothing
 
-prop_complementNonIdentic = \c -> c /= complement c
-prop_complementInvolution = \c -> (c==) . complement . complement $ c
-prop_nonEmptyObjects = \c -> not . null . objects $ c
-prop_nonEmptyAttributes = \c -> not . null . attributes $ c
-prop_tightCrossesAreCrosses = \c ->
-  let i = incidence c
-      i' = incidence $ tightCrosses c
-  in and $ zipWith impl i' i
+prop_complementNonIdentic c = c /= complement c
+prop_complementInvolution c = (c==) . complement . complement $ c
+prop_nonEmptyObjects = not . null . objects
+prop_nonEmptyAttributes = not . null . attributes
+prop_tightCrossesAreCrosses c = let i = incidence c
+                                    i' = incidence $ tightCrosses c
+                                in and $ zipWith impl i' i
   where impl False _ = True
         impl True True = True
         impl True False = False

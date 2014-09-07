@@ -168,7 +168,7 @@ clarify' c n is = let ub = length is - 1
 
 -- |Clarify a given context
 clarify :: Context -> Context
-clarify c@(Context g m i) = do
+clarify c@(Context g m i) =
   let no = length $ keys g
       na = length $ keys m
       (g', ro) = clarify' Object g
@@ -262,7 +262,7 @@ augment c@(Context g m i) = AugmentedContext g m i'
 -- |Diminish an augmented context, dropping the arrows
 diminish :: AugmentedContext -> Context
 diminish (AugmentedContext g m i) = Context g m i'
-  where i' = computeUnboxedS $ R.map (==Cross) $ i
+  where i' = computeUnboxedS $ R.map (==Cross) i
 
 -- |Reduce (and clarify) a given formal context
 reduce :: Context -> Context

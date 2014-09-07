@@ -31,14 +31,14 @@ minimalCovers cover = (moc, mac)
                                                  in ( unObject $ fst b !! j
                                                     , unAttribute <$> snd b
                                                     )
-                                , js = (subtract 1) . length . fst . (cover!!)
+                                , js = subtract 1 . length . fst . (cover!!)
                                 }
         mac = map (Attribute *** Object) <$>
               minimize Minimize { at = \(i, j) -> let b = cover !! i
                                                  in ( unAttribute $ snd b !! j
                                                     , unObject <$> fst b
                                                     )
-                                , js = (subtract 1) . length . snd . (cover!!)
+                                , js = subtract 1 . length . snd . (cover!!)
                                 }
 
 data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int])
@@ -47,16 +47,16 @@ data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int])
 
 minimizeCover :: [Concept] -> Minimize -> [[(Int, Int)]]
 minimizeCover cover mi = go (0, 0) [] []
-  where is = (length cover) - 1
+  where is = length cover - 1
         go :: (Int, Int) -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]
         go ij [] !sns =
           let redundant = removable ij []
               sns' = if redundant then [ij]:sns else sns
-              stack' = if redundant then [ij] else []
+              stack' = [ij | redundant]
           in case next ij of
             Nothing -> sns'
             Just ij' -> go ij' stack' sns
-        go ij !stack@(top:rest) !sns =
+        go ij stack@(top:rest) !sns =
           let redundant = removable ij stack
               stack' = if redundant then ij:stack else stack
               rest' = if redundant then ij:rest else rest
@@ -70,7 +70,7 @@ minimizeCover cover mi = go (0, 0) [] []
                                             ]
                                  then sns
                                  else stack':sns
-                      in case (next top) of
+                      in case next top of
                          Nothing -> sns'
                          Just top' -> go top' rest' sns'
             Just ij' -> go ij' stack' sns
@@ -90,7 +90,7 @@ minimizeCover cover mi = go (0, 0) [] []
                                stillCovered = fromList $
                                               concat [ [ (i, j)
                                                        | j <- [0 .. js mi i]
-                                                       , not $ (i, j) `elem` ijs
+                                                       , (i, j) `notElem` ijs
                                                        ]
                                                      | i <- [0 .. is]
                                                      ]
