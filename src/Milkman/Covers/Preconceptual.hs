@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, TupleSections #-}
 
 {- |
 Module      :  Milkman.Covers.Preconceptual
@@ -23,18 +23,20 @@ import Milkman.Context.Context ( Attribute (..)
                                , Object (..)
                                )
 
+import Debug.Trace (traceShow)
+
 -- |Find all minimal preconceptual covers
-minimalCovers :: [Concept] -> ([[(Object, Attribute)]], [[(Attribute, Object)]])
+minimalCovers :: [Concept] -> ([[([Object], [Attribute])]], [[([Attribute], [Object])]])
 minimalCovers cover = (moc, mac)
   where minimize = minimizeCover cover
-        moc = map (Object *** Attribute) <$>
+        moc = map (map Object *** map Attribute) <$>
               minimize Minimize { at = \(i, j) -> let b = cover !! i
                                                  in ( unObject $ fst b !! j
                                                     , unAttribute <$> snd b
                                                     )
                                 , js = subtract 1 . length . fst . (cover!!)
                                 }
-        mac = map (Attribute *** Object) <$>
+        mac = map (map Attribute *** map Object) <$>
               minimize Minimize { at = \(i, j) -> let b = cover !! i
                                                  in ( unAttribute $ snd b !! j
                                                     , unObject <$> fst b
@@ -43,16 +45,22 @@ minimalCovers cover = (moc, mac)
                                 }
 
 -- |Search state for the minimal preconceptual cover search
-data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int]) -- ^ FIXME
-                         , js :: Int -> Int                 -- ^ FIXME
+data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int]) -- ^ row (i, j)
+                         , js :: Int -> Int                 -- ^ number of objects of a given factor
                          }
 
 -- |Find all minimal preconceptual covers of a given conceptual cover
-minimizeCover :: [Concept]       -- ^ conceptual cover
-              -> Minimize        -- ^ search state
-              -> [[(Int, Int)]]  -- ^ minimal preconceptual covers
-minimizeCover cover mi = go (0, 0) [] []
+minimizeCover :: [Concept]        -- ^ conceptual cover
+              -> Minimize         -- ^ search state
+              -> [[([Int], [Int])]] -- ^ minimal preconceptual covers
+minimizeCover cover mi = map toSolution $ go (0, 0) [] []
   where is = length cover - 1
+        toSolution :: [(Int, Int)] -> [([Int], [Int])]
+        toSolution sn = traceShow cover $ traceShow sn $ [ (ai', bi')
+                        | (i, (ai, bi)) <- zip [0..] cover
+                        , let ai' = unObject <$> filter ((`notElem` sn) . (i,) . unObject) ai
+                              bi' = unAttribute <$> bi
+                        ]
         go :: (Int, Int) -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]
         go ij [] !sns =
           let redundant = removable ij []
@@ -96,6 +104,7 @@ minimizeCover cover mi = go (0, 0) [] []
                                               concat [ [ (i, j)
                                                        | j <- [0 .. js mi i]
                                                        , (i, j) `notElem` ijs
+                                                       , (i, j) /= ij
                                                        ]
                                                      | i <- [0 .. is]
                                                      ]
