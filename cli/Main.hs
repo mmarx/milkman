@@ -3,7 +3,6 @@ module Main (main)
 
 import Prelude hiding (writeFile)
 
-import Control.Arrow ((***))
 import Control.Monad (when)
 import Data.List (intercalate)
 import Data.String (fromString)
@@ -23,6 +22,8 @@ import Milkman.Context ( Concept
                        , Context
                        , concepts
                        , showIncidence
+                       , tightCrosses
+                       , productContext
                        )
 import Milkman.Covers ( conceptualCovers
                       , minimalCovers
@@ -51,15 +52,16 @@ writeFactors opts input cxt cs@(idx, cover) = do
 
   when (preconceptual opts) $ do
    let (mo, ma) = minimalCovers cover
-       mo' = map (map (return *** return)) mo
-       ma' = map (map ((return *** return) . swap)) ma
+       ma' = map (map swap) ma
        write' = write . ((show idx <> "-")++)
+   when (verbose opts) $ do
+     put (tightCrosses cxt)
 
    putStrLn ("Factorization has "
              <> (show . length $ mo)
              <> " minimal object covers.")
    putStrLn ""
-   mapM_ (write' "minimal-objects") $ zip [1..] mo'
+   mapM_ (write' "minimal-objects") $ zip [1..] mo
 
    putStrLn ("Factorization has "
              <> (show . length $ ma)
@@ -88,13 +90,17 @@ writeFactors' opts cxt input extra (idx, cover) = do
     putStrLn $ "Factorization " <> show idx <> ":"
     put gf
     put fm
+    putStrLn $ "Product:"
+    pc <- productContext gf fm
+    put pc
+    putStrLn $ "Product equals original: " <> show (pc == cxt)
 
   putStrLn $ "Writing `" <> out "objects" <> "'."
   writeFile (out "objects") $ showBurmeister gf
   putStrLn $ "Writing `" <> out "attributes" <> "'."
   writeFile (out "attributes") $ showBurmeister fm
 
-- |Factor all contexts given as CLI arguments
+-- |Factor all contexts given as CLI arguments
 factor :: Options -> IO ()
 factor opts = do
   when (verbose opts) $ do
