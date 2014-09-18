@@ -24,6 +24,7 @@ module Milkman.Context ( Concept
                        , objectAttributeConcepts
                        , objectConcept
                        , objects
+                       , productContext
                        , reduce
                        , showAugmented
                        , showIncidence
@@ -354,3 +355,22 @@ concepts c@(Context g m _) = go (keys m) [keys g]
                                                 ]
         go [] exts = map conceptify exts
           where conceptify ext = (ext, intent' c ext)
+
+
+-- |Compute the context product of two contexts
+productContext :: Monad m => Context -> Context -> m Context
+productContext gf@(Context _ _ igf) fm@(Context _ _ ifm) = do
+  let (objs, g) = unzip . objects $ gf
+      f = fst <$> attributes gf
+      f' = fst <$> objects fm
+      (attrs, m) = unzip . attributes $ fm
+      nf = length f
+  when ((unAttribute <$> f) /= (unObject <$> f')) $ fail "Factors differ."
+  let i = [ [ any (\factor -> (incident igf obj (Attribute factor))
+                              && incident ifm (Object factor) attr)
+              [0 .. nf - 1]
+            | attr <- attrs
+            ]
+          | obj <- objs
+          ]
+  mkContext g m i
