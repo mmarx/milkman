@@ -22,7 +22,6 @@ import Milkman.Context ( Concept
                        , Context
                        , concepts
                        , showIncidence
-                       , tightCrosses
                        , productContext
                        )
 import Milkman.Covers ( conceptualCovers
@@ -85,15 +84,18 @@ writeFactors' opts cxt input extra (idx, cover) = do
               , n
               ]) <.> "cxt"
   (gf, fm) <- factorContexts cxt cover
+  pc <- productContext gf fm
+  when (pc /= cxt) $ do
+    putStrLn "Original:"
+    put cxt
+    putStrLn "Product:"
+    put pc
+    putStrLn "Product does not equal original context."
 
   when (verbose opts) $ do
     putStrLn $ "Factorization " <> show idx <> ":"
     put gf
     put fm
-    putStrLn $ "Product:"
-    pc <- productContext gf fm
-    put pc
-    putStrLn $ "Product equals original: " <> show (pc == cxt)
 
   putStrLn $ "Writing `" <> out "objects" <> "'."
   writeFile (out "objects") $ showBurmeister gf
