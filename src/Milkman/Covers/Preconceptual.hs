@@ -18,17 +18,20 @@ import Data.Set ( fromList
                 , isSubsetOf
                 )
 
-import Milkman.Context (Concept)
+import Milkman.Context ( Concept
+                       , Context
+                       , crosses
+                       )
 import Milkman.Context.Context ( Attribute (..)
                                , Object (..)
                                )
 
-import Debug.Trace (traceShow)
-
 -- |Find all minimal preconceptual covers
-minimalCovers :: [Concept] -> ([[([Object], [Attribute])]], [[([Attribute], [Object])]])
-minimalCovers cover = (moc, mac)
-  where minimize = minimizeCover cover
+minimalCovers :: Context         -- ^ covered context
+                -> [Concept]     -- ^ conceptual cover
+                -> ([[([Object], [Attribute])]], [[([Attribute], [Object])]])
+minimalCovers cxt cover = (moc, mac)
+  where minimize = minimizeCover cxt cover
         moc = map (map Object *** map Attribute) <$>
               minimize Minimize { at = \(i, j) -> let b = cover !! i
                                                  in ( unObject $ fst b !! j
@@ -50,13 +53,14 @@ data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int]) -- ^ row (i, j)
                          }
 
 -- |Find all minimal preconceptual covers of a given conceptual cover
-minimizeCover :: [Concept]        -- ^ conceptual cover
-              -> Minimize         -- ^ search state
+minimizeCover :: Context            -- ^ covered context
+              -> [Concept]          -- ^ conceptual cover
+              -> Minimize           -- ^ search state
               -> [[([Int], [Int])]] -- ^ minimal preconceptual covers
-minimizeCover cover mi = map toSolution $ go (0, 0) [] []
+minimizeCover cxt cover mi = map toSolution $ go (0, 0) [] []
   where is = length cover - 1
         toSolution :: [(Int, Int)] -> [([Int], [Int])]
-        toSolution sn = traceShow cover $ traceShow sn $ [ (ai', bi')
+        toSolution sn = [ (ai', bi')
                         | (i, (ai, bi)) <- zip [0..] cover
                         , let ai' = unObject <$> filter ((`notElem` sn) . (i,) . unObject) ai
                               bi' = unAttribute <$> bi
@@ -96,17 +100,19 @@ minimizeCover cover mi = map toSolution $ go (0, 0) [] []
 
         removable :: (Int, Int) -> [(Int, Int)] -> Bool
         removable ij ijs = let gone = ij `elem` ijs
-                               shouldCover = fromList [ (i, j)
-                                                      | let (i, js') = at mi ij
-                                                      , j <- js'
-                                                      ]
-                               stillCovered = fromList $
-                                              concat [ [ (i, j)
-                                                       | j <- [0 .. js mi i]
-                                                       , (i, j) `notElem` ijs
-                                                       , (i, j) /= ij
-                                                       ]
-                                                     | i <- [0 .. is]
+                               shouldCover = fromList $ map (unObject *** unAttribute) $ crosses cxt
+                               coverParts = concat [ [ (i, j)
+                                                     | j <- [0 .. js mi i]
+                                                     , (i, j) `notElem` ijs
+                                                     , (i, j) /= ij
                                                      ]
+                                                   | i <- [0 .. is]
+                                                   ]
+                               stillCovered = fromList $ concat [ [ (i, j)
+                                                                  | let (i, js') = at mi ij'
+                                                                  , j <- js'
+                                                                  ]
+                                                                | ij' <- coverParts
+                                                                ]
                                covered = shouldCover `isSubsetOf` stillCovered
                            in not gone && covered

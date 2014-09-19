@@ -50,11 +50,9 @@ writeFactors opts input cxt cs@(idx, cover) = do
   write "" cs
 
   when (preconceptual opts) $ do
-   let (mo, ma) = minimalCovers cover
+   let (mo, ma) = minimalCovers cxt cover
        ma' = map (map swap) ma
        write' = write . ((show idx <> "-")++)
-   when (verbose opts) $ do
-     put (tightCrosses cxt)
 
    putStrLn ("Factorization has "
              <> (show . length $ mo)
