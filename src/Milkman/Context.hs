@@ -17,6 +17,7 @@ module Milkman.Context ( Concept
                        , clarify
                        , complement
                        , concepts
+                       , crosses
                        , extent
                        , incidence
                        , intent
@@ -374,3 +375,12 @@ productContext gf@(Context _ _ igf) fm@(Context _ _ ifm) = do
           | obj <- objs
           ]
   mkContext g m i
+
+
+-- |Compute the indexes of all the crosses of a given context
+crosses :: Context -> [(Object, Attribute)]
+crosses (Context g m i) = [ (o, a)
+                          | o <- keys g
+                          , a <- keys m
+                          , incident i o a
+                          ]
