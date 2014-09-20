@@ -12,6 +12,7 @@ import Test.Tasty.Runners ( consoleTestReporter
 import Test.Tasty.Runners.AntXML (antXMLRunner)
 
 import Milkman.ContextTests (testContext)
+import Milkman.CoversTests (testCovers)
 
 main :: IO ()
 main = defaultMainWithIngredients [ listingTests
@@ -20,4 +21,6 @@ main = defaultMainWithIngredients [ listingTests
                                   ] tests
 
 tests :: TestTree
-tests = testGroup "Context" [testContext]
+tests = testGroup "milkman" [ testGroup "Context" [testContext]
+                            , testGroup "Covers" [testCovers]
+                            ]
