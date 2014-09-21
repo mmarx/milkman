@@ -19,12 +19,24 @@ import Milkman.Test.Context ()
 testCovers :: TestTree
 testCovers = localOption (QC.QuickCheckMaxSize 35) $ $(testGroupGenerator)
 
+factorizationActuallyFactors cxt cover = do
+  (gf, fm) <- factorContexts cxt cover
+  pc <- productContext gf fm
+  assert $ cxt == pc
+
 prop_ConceptualFactorizationFactors = monadicIO $ do
   cxt <- pick QC.arbitrary
   pre . not . null . crosses $ cxt     -- don't try to factor an empty context
   pre $ (length $ concepts cxt) <= 23 -- stick to small contexts
   let cs = conceptualCovers cxt
-  mapM_ (\cover -> do
-            (gf, fm) <- factorContexts cxt cover
-            pc <- productContext gf fm
-            assert $ cxt == pc) cs
+  mapM_ (factorizationActuallyFactors cxt) cs
+
+
+prop_PreconceptualFactorizationFactors = monadicIO $ do
+  cxt <- pick QC.arbitrary
+  pre . not . null . crosses $ cxt
+  pre $ (length $ concepts cxt) <= 23
+  let (mas, mos) = unzip [ minimalCovers cover
+                         | cover <- conceptualCovers cxt
+                         ]
+  mapM_ (factorizationActuallyFactors cxt) $ concat $ mos ++ mas
