@@ -367,7 +367,7 @@ productContext gf@(Context _ _ igf) fm@(Context _ _ ifm) = do
       (attrs, m) = unzip . attributes $ fm
       nf = length f
   when ((unAttribute <$> f) /= (unObject <$> f')) $ fail "Factors differ."
-  let i = [ [ any (\factor -> (incident igf obj (Attribute factor))
+  let i = [ [ any (\factor -> incident igf obj (Attribute factor)
                               && incident ifm (Object factor) attr)
               [0 .. nf - 1]
             | attr <- attrs

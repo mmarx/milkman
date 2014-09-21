@@ -54,7 +54,7 @@ coveredBy :: [Concept]           -- ^ conceptual cover
           -> (Object, Attribute) -- ^ cross
           -> [(Int, Int)]
 coveredBy cover mi (obj, attr) = concat [ [ (i, j)
-                                          | j <- [0 .. (js mi i) - 1]
+                                          | j <- [0 .. js mi i - 1]
                                           , let (o, as) = at mi (i, j)
                                           , o == unObject obj
                                           , unAttribute attr `elem` as
