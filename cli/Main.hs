@@ -52,12 +52,14 @@ writeFactors opts input cxt cs@(idx, cover) = do
    let (mo, ma) = minimalCovers cover
        write' = write . ((show idx <> "-")++)
 
+   putStrLn ""
    putStrLn ("Factorization has "
              <> (show . length $ mo)
              <> " minimal object covers.")
    putStrLn ""
    mapM_ (write' "minimal-objects") $ zip [1..] mo
 
+   putStrLn ""
    putStrLn ("Factorization has "
              <> (show . length $ ma)
              <> " minimal attribute covers.")
@@ -86,7 +88,7 @@ writeFactors' opts cxt input extra (idx, cover) = do
     put cxt
     putStrLn "Product:"
     put pc
-    fail $ "Product does not equal original context."
+    fail "Product does not equal original context."
 
   when (verbose opts) $ do
     putStrLn $ "Factorization " <> show idx <> ":"
