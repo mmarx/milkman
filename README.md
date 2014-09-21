@@ -1,4 +1,4 @@
-# milkman [![Build Status](https://travis-ci.org/mmarx/milkman.svg?branch=develop)](https://travis-ci.org/mmarx/milkman)
+# milkman [![Build Status](https://travis-ci.org/mmarx/milkman.svg?branch=master)](https://travis-ci.org/mmarx/milkman)
 
 Computes all minimal (pre-)conceptual boolean factorizations of a
 given formal context.  Currently supports reading contexts in
