@@ -20,7 +20,7 @@ testCovers :: TestTree
 testCovers = localOption (QC.QuickCheckMaxSize 35) $ $(testGroupGenerator)
 
 ensureSmallContext cxt = do
-  pre . not . null . crosses $ cxt     -- don't try to factor an empty context
+  pre . not . null . crosses $ cxt   -- don't try to factor an empty context
   pre $ length (concepts cxt) <= 23 -- stick to small contexts
 
 factorizationActuallyFactors cxt cover = do
