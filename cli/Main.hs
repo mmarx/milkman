@@ -7,7 +7,6 @@ import Control.Monad (when)
 import Data.List (intercalate)
 import Data.String (fromString)
 import Data.Text.IO (writeFile)
-import Data.Tuple (swap)
 import System.FilePath ( (<.>)
                        , (</>)
                        , takeBaseName
@@ -50,8 +49,7 @@ writeFactors opts input cxt cs@(idx, cover) = do
   write "" cs
 
   when (preconceptual opts) $ do
-   let (mo, ma) = minimalCovers cxt cover
-       ma' = map (map swap) ma
+   let (mo, ma) = minimalCovers cover
        write' = write . ((show idx <> "-")++)
 
    putStrLn ("Factorization has "
@@ -64,7 +62,7 @@ writeFactors opts input cxt cs@(idx, cover) = do
              <> (show . length $ ma)
              <> " minimal attribute covers.")
    putStrLn ""
-   mapM_ (write' "minimal-attributes") $ zip [1..] ma'
+   mapM_ (write' "minimal-attributes") $ zip [1..] ma
 
 -- |Actually write the factorization to disk
 writeFactors' :: Options         -- ^ CLI options
@@ -88,7 +86,7 @@ writeFactors' opts cxt input extra (idx, cover) = do
     put cxt
     putStrLn "Product:"
     put pc
-    putStrLn "Product does not equal original context."
+    fail $ "Product does not equal original context."
 
   when (verbose opts) $ do
     putStrLn $ "Factorization " <> show idx <> ":"

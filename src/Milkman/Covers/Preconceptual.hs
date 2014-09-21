@@ -14,33 +14,26 @@ module Milkman.Covers.Preconceptual (minimalCovers)
 
 import Control.Applicative ((<$>))
 import Control.Arrow ((***))
-import Data.Set ( fromList
-                , isSubsetOf
-                )
+import Data.List ((\\))
 
-import Milkman.Context ( Concept
-                       , Context
-                       , crosses
-                       )
+import Milkman.Context (Concept)
 import Milkman.Context.Context ( Attribute (..)
                                , Object (..)
                                )
 
 -- |Find all minimal preconceptual covers
-minimalCovers :: Context         -- ^ covered context
-                -> [Concept]     -- ^ conceptual cover
-                -> ([[([Object], [Attribute])]], [[([Attribute], [Object])]])
-minimalCovers cxt cover = (moc, mac)
-  where minimize = minimizeCover cxt cover
-        moc = map (map Object *** map Attribute) <$>
-              minimize Minimize { at = \(i, j) -> let b = cover !! i
+minimalCovers :: [Concept]       -- ^ conceptual cover
+              -> ([[Concept]], [[Concept]])
+minimalCovers cover = (moc, mac)
+  where minimize = map (map (map Object *** map Attribute)) .
+                   minimizeCover cover
+        moc = minimize Minimize { at = \(i, j) -> let b = cover !! i
                                                  in ( unObject $ fst b !! j
                                                     , unAttribute <$> snd b
                                                     )
                                 , js = subtract 1 . length . fst . (cover!!)
                                 }
-        mac = map (map Attribute *** map Object) <$>
-              minimize Minimize { at = \(i, j) -> let b = cover !! i
+        mac = minimize Minimize { at = \(i, j) -> let b = cover !! i
                                                  in ( unAttribute $ snd b !! j
                                                     , unObject <$> fst b
                                                     )
@@ -52,19 +45,53 @@ data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int]) -- ^ row (i, j)
                          , js :: Int -> Int                 -- ^ number of objects of a given factor
                          }
 
+-- |Find all the rows covering a givne cross
+coveredBy :: [Concept]           -- ^ conceptual cover
+          -> Minimize            -- ^ search state
+          -> (Object, Attribute) -- ^ cross
+          -> [(Int, Int)]
+coveredBy cover mi (obj, attr) = concat [ [ (i, j)
+                                          | j <- [0 .. (js mi i) - 1]
+                                          , let (o, as) = at mi (i, j)
+                                          , o == unObject obj
+                                          , unAttribute attr `elem` as
+                                          ]
+                                        | i <- [0 .. is]
+                                        ]
+  where is = length cover - 1
+
+-- |Check whether a given row is irredundant, i.e. covers a cross
+-- |that isn't covered by any other row
+irredundant :: [Concept]         -- ^ conceptual cover
+            -> Minimize          -- ^ search state
+            -> [(Int, Int)]      -- ^ rows already deleted
+            -> (Int, Int)        -- ^ row to check
+            -> Bool
+irredundant cover mi ijs ij = or [ null $ cs i j \\ (ij:ijs)
+                                 | let (i, js') = at mi ij
+                                 , j <- js'
+                                 ]
+  where cs i j = coveredBy cover mi (Object i, Attribute j)
+
+-- |Transform a conceptual cover into a preconceptual cover by removing rows
+toSolution :: [Concept]          -- ^ conceptual cover
+           -> [(Int, Int)]       -- ^ deleted rows
+           -> [([Int], [Int])]   -- ^ preconceptual cover
+toSolution cover ijs = go [] $ zip [0..] cover
+  where go sn [] = sn
+        go sn ((i, (objs, attrs)):ics) = let objs' = [ unObject o
+                                                     | (j, o) <- zip [0..] objs
+                                                     , (i, j) `notElem` ijs
+                                                     ]
+                                             pc = (objs', unAttribute <$> attrs)
+                                       in go (pc:sn) ics
+
 -- |Find all minimal preconceptual covers of a given conceptual cover
-minimizeCover :: Context            -- ^ covered context
-              -> [Concept]          -- ^ conceptual cover
+minimizeCover :: [Concept]          -- ^ conceptual cover
               -> Minimize           -- ^ search state
               -> [[([Int], [Int])]] -- ^ minimal preconceptual covers
-minimizeCover cxt cover mi = map toSolution $ go (0, 0) [] []
+minimizeCover cover mi = map (toSolution cover) $ go (0, 0) [] []
   where is = length cover - 1
-        toSolution :: [(Int, Int)] -> [([Int], [Int])]
-        toSolution sn = [ (ai', bi')
-                        | (i, (ai, bi)) <- zip [0..] cover
-                        , let ai' = unObject <$> filter ((`notElem` sn) . (i,) . unObject) ai
-                              bi' = unAttribute <$> bi
-                        ]
         go :: (Int, Int) -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]
         go ij [] !sns =
           let redundant = removable ij []
@@ -100,19 +127,9 @@ minimizeCover cxt cover mi = map toSolution $ go (0, 0) [] []
 
         removable :: (Int, Int) -> [(Int, Int)] -> Bool
         removable ij ijs = let gone = ij `elem` ijs
-                               shouldCover = fromList $ map (unObject *** unAttribute) $ crosses cxt
-                               coverParts = concat [ [ (i, j)
-                                                     | j <- [0 .. js mi i]
-                                                     , (i, j) `notElem` ijs
-                                                     , (i, j) /= ij
-                                                     ]
-                                                   | i <- [0 .. is]
-                                                   ]
-                               stillCovered = fromList $ concat [ [ (i, j)
-                                                                  | let (i, js') = at mi ij'
-                                                                  , j <- js'
-                                                                  ]
-                                                                | ij' <- coverParts
-                                                                ]
-                               covered = shouldCover `isSubsetOf` stillCovered
-                           in not gone && covered
+                               oa = (Object *** Attribute) ij
+                               coverers = coveredBy cover mi oa
+                               candidate = ij `elem` coverers
+                               covered = not . null $ coverers \\ (ij:ijs)
+                               redundant = not $ irredundant cover mi ijs ij
+                           in not gone && covered && candidate && redundant
