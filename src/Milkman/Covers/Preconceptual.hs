@@ -32,17 +32,20 @@ minimalCovers cover = (moc, mac)
                                                     , unAttribute <$> snd b
                                                     )
                                 , js = subtract 1 . length . fst . (cover!!)
+                                , toS = deleteRows
                                 }
         mac = minimize Minimize { at = \(i, j) -> let b = cover !! i
                                                  in ( unAttribute $ snd b !! j
                                                     , unObject <$> fst b
                                                     )
                                 , js = subtract 1 . length . snd . (cover!!)
+                                , toS = deleteCols
                                 }
 
 -- |Search state for the minimal preconceptual cover search
 data Minimize = Minimize { at :: (Int, Int) -> (Int, [Int]) -- ^ row (i, j)
                          , js :: Int -> Int                 -- ^ number of objects of a given factor
+                         , toS :: [Concept] -> [(Int, Int)] -> [([Int], [Int])] -- ^ compute solution
                          }
 
 -- |Find all the rows covering a givne cross
@@ -74,10 +77,10 @@ irredundant cover mi ijs ij = or [ null $ cs i j \\ (ij:ijs)
   where cs i j = coveredBy cover mi (Object i, Attribute j)
 
 -- |Transform a conceptual cover into a preconceptual cover by removing rows
-toSolution :: [Concept]          -- ^ conceptual cover
+deleteRows :: [Concept]          -- ^ conceptual cover
            -> [(Int, Int)]       -- ^ deleted rows
            -> [([Int], [Int])]   -- ^ preconceptual cover
-toSolution cover ijs = go [] $ zip [0..] cover
+deleteRows cover ijs = go [] $ zip [0..] cover
   where go sn [] = sn
         go sn ((i, (objs, attrs)):ics) = let objs' = [ unObject o
                                                      | (j, o) <- zip [0..] objs
@@ -86,11 +89,25 @@ toSolution cover ijs = go [] $ zip [0..] cover
                                              pc = (objs', unAttribute <$> attrs)
                                        in go (pc:sn) ics
 
+-- |Transform a conceptual cover into a preconceptual cover by removing columns
+deleteCols :: [Concept]          -- ^ conceptual cover
+            -> [(Int, Int)]      -- ^ deleted cols
+            -> [([Int], [Int])]  -- ^ preconceptual cover
+deleteCols cover ijs = go [] $ zip [0..] cover
+  where go sn [] = sn
+        go sn ((i, (objs, attrs)):ics) = let attrs' = [ unAttribute a
+                                                     | (j, a) <- zip [0..] attrs
+                                                     , (i, j) `notElem` ijs
+                                                     ]
+                                             pc = (unObject <$> objs, attrs')
+                                       in go (pc:sn) ics
+
+
 -- |Find all minimal preconceptual covers of a given conceptual cover
 minimizeCover :: [Concept]          -- ^ conceptual cover
               -> Minimize           -- ^ search state
               -> [[([Int], [Int])]] -- ^ minimal preconceptual covers
-minimizeCover cover mi = map (toSolution cover) $ go (0, 0) [] []
+minimizeCover cover mi = map (toS mi cover) $ go (0, 0) [] []
   where is = length cover - 1
         go :: (Int, Int) -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]
         go ij [] !sns =
